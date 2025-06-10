@@ -8,4 +8,4 @@ Construa a imagem
 
 Execute o container
 
-**docker run -d -p 80:80 -e WEBDAV_USERNAME=seuusuario -e WEBDAV_PASSWORD=suasenha -v /caminho/para/dados:/var/www/webdav --name webdav kambura/debian-webdav**
+**docker run -d -p 80:80 -e WEBDAV_USERNAME=seuusuario -e WEBDAV_PASSWORD=suasenha -v /caminho/para/dados:/var/www/webdav --name webdav kambura/debian-webdav:1.0**
