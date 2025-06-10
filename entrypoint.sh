@@ -1,17 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 
-# Configura usuário e senha
-if [ ! -f "/etc/apache2/webdav.password" ]; then
-    htpasswd -bc /etc/apache2/webdav.password "${USERNAME}" "${PASSWORD}"
-else
-    htpasswd -b /etc/apache2/webdav.password "${USERNAME}" "${PASSWORD}"
+# Configura usuário e senha se fornecidos
+if [ -n "$WEBDAV_USERNAME" ] && [ -n "$WEBDAV_PASSWORD" ]; then
+    htpasswd -cb /etc/apache2/webdav.password "$WEBDAV_USERNAME" "$WEBDAV_PASSWORD"
+    chown www-data:www-data /etc/apache2/webdav.password
+    chmod 640 /etc/apache2/webdav.password
 fi
 
-# Gera certificado SSL se necessário
-generate-ssl.sh
-
-# Ajusta permissões
-chown -R apache:apache /media
+# Substitui variáveis no arquivo de configuração
+envsubst < /etc/apache2/sites-available/webdav.conf > /etc/apache2/sites-available/webdav.conf.tmp && \
+mv /etc/apache2/sites-available/webdav.conf.tmp /etc/apache2/sites-available/webdav.conf
 
 # Executa o comando principal
 exec "$@"
