@@ -1,5 +1,6 @@
 # debian-webdav
-Servidor webdav leve e funcional com Alpine Linux
+
+Servidor webdav leve e funcional com debian Linux 12
 
 Construa a imagem
 
