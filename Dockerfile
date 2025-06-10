@@ -23,9 +23,7 @@ RUN a2enmod dav && \
 
 # Cria diretório para dados WebDAV
 RUN mkdir -p /var/www/webdav && \
-    chown -R www-data:www-data /var/www/webdav && \
-    mkdir -p /media && \
-    chown -R www-data:www-data /media
+    chown -R www-data:www-data /var/www/webdav
 
 # Configuração do VirtualHost
 COPY webdav.conf /etc/apache2/sites-available/webdav.conf
@@ -40,7 +38,7 @@ RUN chmod +x /entrypoint.sh
 EXPOSE ${WEBDAV_PORT}
 
 # Ponto de montagem para dados persistentes
-VOLUME ["/var/www/webdav", "/media"]
+VOLUME ["/var/www/webdav"]
 
 # Comando de inicialização
 ENTRYPOINT ["/entrypoint.sh"]
