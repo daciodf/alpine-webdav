@@ -1,57 +1,39 @@
-# Usa a imagem oficial do Alpine Linux
+# Use Alpine Linux como imagem base
 FROM alpine:latest
 
-# Instala pacotes necessários
+# Variáveis de ambiente para configuração
+ENV USERNAME=webdav_user
+ENV PASSWORD=webdav_pass
+ENV SSL_CERT=/etc/ssl/certs/webdav.crt
+ENV SSL_KEY=/etc/ssl/private/webdav.key
+ENV PORT=443
+
+# Instala os pacotes necessários
 RUN apk add --no-cache \
     apache2 \
-    apache2-ssl \
     apache2-utils \
     apache2-webdav \
     openssl \
     && mkdir -p /run/apache2 \
-    && mkdir -p /var/www/localhost/htdocs \
     && mkdir -p /media \
     && chown -R apache:apache /media
 
-# Criação do usuário WebDAV com variáveis de ambiente
-ENV WEBDAV_USER=admin
-ENV WEBDAV_PASS=password
+# Configuração do Apache
+COPY webdav.conf /etc/apache2/conf.d/webdav.conf
 
-RUN htpasswd -bc /etc/apache2/webdav.password "$WEBDAV_USER" "$WEBDAV_PASS"
+# Script para gerar certificado autoassinado se não existir
+COPY generate-ssl.sh /usr/local/bin/generate-ssl.sh
+RUN chmod +x /usr/local/bin/generate-ssl.sh
 
-# Configuração do Apache com WebDAV e SSL
-RUN cat <<EOF > /etc/apache2/httpd.conf
-ServerName localhost
-LoadModule dav_module modules/mod_dav.so
-LoadModule dav_fs_module modules/mod_dav_fs.so
-LoadModule auth_digest_module modules/mod_auth_digest.so
+# Expõe a porta HTTPS
+EXPOSE ${PORT}
 
-<VirtualHost *:443>
-    SSLEngine on
-    SSLCertificateFile /etc/apache2/ssl/server.crt
-    SSLCertificateKeyFile /etc/apache2/ssl/server.key
-    DocumentRoot /var/www/localhost/htdocs
+# Ponto de montagem para dados persistentes
+VOLUME /media
 
-    Alias /webdav /media
-    <Directory /media>
-        Dav On
-        AuthType Basic
-        AuthName "WebDAV Secure Server"
-        AuthUserFile /etc/apache2/webdav.password
-        Require valid-user
-    </Directory>
-</VirtualHost>
-EOF
+# Script de entrada para configurar usuário/senha
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Gera certificado SSL autoassinado
-RUN mkdir -p /etc/apache2/ssl && \
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/apache2/ssl/server.key \
-    -out /etc/apache2/ssl/server.crt \
-    -subj "/C=BR/ST=State/L=City/O=Organization/OU=IT Department/CN=localhost"
-
-# Exposição da porta HTTPS
-EXPOSE 443
-
-# Comando de inicialização
-CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["httpd", "-D", "FOREGROUND"]
