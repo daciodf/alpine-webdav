@@ -20,7 +20,7 @@ ENV WEBDAV_PASS=password
 RUN htpasswd -bc /etc/apache2/webdav.password "$WEBDAV_USER" "$WEBDAV_PASS"
 
 # Configuração do Apache com WebDAV e SSL
-RUN echo "
+RUN cat <<EOF > /etc/apache2/httpd.conf
 ServerName localhost
 LoadModule dav_module modules/mod_dav.so
 LoadModule dav_fs_module modules/mod_dav_fs.so
@@ -36,22 +36,22 @@ LoadModule auth_digest_module modules/mod_auth_digest.so
     <Directory /media>
         Dav On
         AuthType Basic
-        AuthName \"WebDAV Secure Server\"
+        AuthName "WebDAV Secure Server"
         AuthUserFile /etc/apache2/webdav.password
         Require valid-user
     </Directory>
 </VirtualHost>
-" > /etc/apache2/httpd.conf
+EOF
 
 # Gera certificado SSL autoassinado
-RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+RUN mkdir -p /etc/apache2/ssl && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout /etc/apache2/ssl/server.key \
     -out /etc/apache2/ssl/server.crt \
-    -subj \"/C=US/ST=State/L=City/O=Organization/OU=IT Department/CN=localhost\"
+    -subj "/C=BR/ST=State/L=City/O=Organization/OU=IT Department/CN=localhost"
 
 # Exposição da porta HTTPS
 EXPOSE 443
 
 # Comando de inicialização
 CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
-
