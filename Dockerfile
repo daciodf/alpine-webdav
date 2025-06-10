@@ -10,6 +10,7 @@ ENV WEBDAV_PORT=80
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     apache2 \
+    gettext-base \
     apache2-utils \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,6 +34,10 @@ RUN a2dissite 000-default && \
 # Script para configurar usuário/senha
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Custom-apache.conf (para definir o ServerName)
+COPY custom-apache.conf /etc/apache2/conf-available/custom.conf
+RUN a2enconf custom
 
 # Expõe a porta do WebDAV
 EXPOSE ${WEBDAV_PORT}
