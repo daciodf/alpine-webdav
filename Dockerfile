@@ -1,34 +1,47 @@
-FROM alpine:latest
+# Use a imagem base do Debian 12
+FROM debian:bookworm-slim
 
-# Variáveis de ambiente não sensíveis
-ENV USERNAME=webdav_user
-ENV SSL_CERT=/etc/ssl/certs/webdav.crt
-ENV PORT=443
+# Variáveis de ambiente para configuração
+ENV WEBDAV_USERNAME=admin
+ENV WEBDAV_PASSWORD=password
+ENV WEBDAV_PORT=80
 
-# Instala os pacotes necessários (incluindo apache2-ssl)
-RUN apk add --no-cache \
+# Instala dependências
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     apache2 \
     apache2-utils \
-    apache2-webdav \
-    apache2-ssl \
-    openssl \
-    && mkdir -p /run/apache2 \
-    && mkdir -p /media \
-    && chown -R apache:apache /media
+    && rm -rf /var/lib/apt/lists/*
 
-# Configuração do Apache
-COPY webdav.conf /etc/apache2/conf.d/webdav.conf
+# Configura o Apache para WebDAV
+RUN a2enmod dav && \
+    a2enmod dav_fs && \
+    a2enmod auth_digest && \
+    a2enmod authn_core && \
+    a2enmod auth_basic && \
+    a2enmod authz_user
 
-# Script para gerar certificado autoassinado
-COPY generate-ssl.sh /usr/local/bin/generate-ssl.sh
-RUN chmod +x /usr/local/bin/generate-ssl.sh
+# Cria diretório para dados WebDAV
+RUN mkdir -p /var/www/webdav && \
+    chown -R www-data:www-data /var/www/webdav && \
+    mkdir -p /media && \
+    chown -R www-data:www-data /media
 
-# Script de entrada
+# Configuração do VirtualHost
+COPY webdav.conf /etc/apache2/sites-available/webdav.conf
+RUN a2dissite 000-default && \
+    a2ensite webdav
+
+# Script para configurar usuário/senha
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-EXPOSE ${PORT}
-VOLUME /media
+# Expõe a porta do WebDAV
+EXPOSE ${WEBDAV_PORT}
 
+# Ponto de montagem para dados persistentes
+VOLUME ["/var/www/webdav", "/media"]
+
+# Comando de inicialização
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["httpd", "-D", "FOREGROUND"]
+CMD ["apache2ctl", "-D", "FOREGROUND"]
